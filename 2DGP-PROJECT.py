@@ -6,10 +6,9 @@ BK_WIDTH, BK_HEIGHT = 1080, 879
 dir_x = 0  # x축 이동 방향 (왼쪽: -1, 오른쪽: 1)
 dir_y = 0  # y축 이동 방향 (아래: -1, 위: 1)
 open_canvas(BK_WIDTH, BK_HEIGHT)
-
 fish1_list = []
 last_spawn_time = time.time()
-
+fish1_cnt = 0
 # 배경 클래스
 class BackGround:
     def __init__(self):
@@ -316,7 +315,7 @@ def reset_world():
     crab = Crab()
 # 월드 업데이트
 def update_world():
-    global last_spawn_time
+    global last_spawn_time, fish1_cnt
     current_time = time.time()
 
     if current_time - last_spawn_time >= 5.0:
@@ -334,6 +333,7 @@ def update_world():
         fish.update()
         if check_collision(whale, fish):  # Whale과 Fish1 충돌 체크
             whale.is_colliding = True
+            fish1_cnt+=1
             whale.collision_time = time.time()
             fish1_list.remove(fish)  # 충돌한 Fish1 제거
         elif fish.x < -50 or fish.x > BK_WIDTH + 50:  # 화면 밖으로 나간 경우 제거
@@ -355,7 +355,7 @@ def render_world():
     crab.draw()
     whale.draw()  # 고래 그리기 추가
     update_canvas()
-
+    print(fish1_cnt)
 # 초기화 코드
 reset_world()
 
