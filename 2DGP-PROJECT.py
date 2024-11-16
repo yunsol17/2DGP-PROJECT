@@ -14,7 +14,15 @@ class BackGround:
         pass
     def draw(self):
         self.image.draw(BK_WIDTH // 2, BK_HEIGHT // 2)
-
+# 충돌 체크 함수
+def check_collision(a, b):
+    left_a, bottom_a, right_a, top_a = a.get_bb()
+    left_b, bottom_b, right_b, top_b = b.get_bb()
+    if left_a > right_b: return False
+    if right_a < left_b: return False
+    if top_a < bottom_b: return False
+    if bottom_a > top_b: return False
+    return True
 # 고래 클래스
 class Whale:
     def __init__(self):
@@ -40,18 +48,23 @@ class Whale:
             self.y = BK_HEIGHT-100
         if dir_x != 0:
             self.direction = dir_x
-
     def draw(self):
         if self.direction ==-1:
+            draw_rectangle(*self.get_bb())
             self.image.clip_draw(self.frame * self.frame_width, 3 * self.frame_height, self.frame_width, self.frame_height, self.x, self.y,100,100)
         else:
+            draw_rectangle(*self.get_bb())
             self.image.clip_composite_draw(self.frame * self.frame_width, 3 * self.frame_height, self.frame_width, self.frame_height,0,'h', self.x, self.y,100,100)
+
+    def get_bb(self):
+        return self.x - 40, self.y - 20, self.x + 50, self.y + 20
+
 
 class Squid:
     def __init__(self):
         self.x, self.y = -20, random.randint(230, BK_HEIGHT - 100)
         self.frame = 0
-        self.direction = random.choice([-1, 1])  # 랜덤 방향 선택
+        self.direction = -1
         self.image = load_image('squid.png')
         self.frame_width = self.image.w // 5  # 스프라이트 가로 분할
         self.frame_height = self.image.h
@@ -64,11 +77,14 @@ class Squid:
         if self.direction == -1:
             self.image.clip_draw(self.frame * self.frame_width, 0,
                                  self.frame_width, self.frame_height,
-                                 self.x, self.y, 50, 50)  # 크기 조정
+                                 self.x, self.y, 150, 150)  # 크기 조정
+            draw_rectangle(*self.get_bb())
         else:
-            self.image.clip_composite_draw(self.frame * self.frame_width, 0,
-                                           self.frame_width, self.frame_height,
-                                           0, 'h', self.x, self.y, 50, 50)
+            self.image.clip_composite_draw(self.frame * self.frame_width, 0,self.frame_width, self.frame_height,0, 'h', self.x, self.y, 150, 150)
+            draw_rectangle(*self.get_bb())
+    def get_bb(self):
+        return self.x - 5, self.y - 45, self.x + 40, self.y + 60
+
 class Fish1:
     def __init__(self):
         self.x, self.y = -20, random.randint(230, BK_HEIGHT - 100)
@@ -86,10 +102,14 @@ class Fish1:
             self.image.clip_draw(self.frame * self.frame_width, 0,
                                  self.frame_width, self.frame_height,
                                  self.x, self.y, 20, 20)  # 크기 조정
+            draw_rectangle(*self.get_bb())
         else:
             self.image.clip_composite_draw(self.frame * self.frame_width, 0,
                                            self.frame_width, self.frame_height,
                                            0, 'h', self.x, self.y, 20, 20)
+            draw_rectangle(*self.get_bb())
+    def get_bb(self):
+        return self.x - 10, self.y - 10, self.x + 10, self.y + 10
 
 class Fish2:
     def __init__(self):
@@ -105,14 +125,17 @@ class Fish2:
 
     def draw(self):
         if self.direction == -1:
+            draw_rectangle(*self.get_bb())
             self.image.clip_draw(self.frame * self.frame_width, 0,
                                  self.frame_width, self.frame_height,
-                                 self.x, self.y, 40, 40)  # 크기 조정
+                                 self.x, self.y, 50, 50)  # 크기 조정
         else:
+            draw_rectangle(*self.get_bb())
             self.image.clip_composite_draw(self.frame * self.frame_width, 0,
                                            self.frame_width, self.frame_height,
-                                           0, 'h', self.x, self.y, 40, 40)
-
+                                           0, 'h', self.x, self.y, 50, 50)
+    def get_bb(self):
+        return self.x - 20, self.y - 20, self.x + 20, self.y + 20
 class Fish3:
     def __init__(self):
         self.x, self.y = -20, random.randint(230, BK_HEIGHT - 100)
@@ -128,14 +151,17 @@ class Fish3:
 
     def draw(self):
         if self.direction == -1:
+            draw_rectangle(*self.get_bb())
             self.image.clip_draw(self.frame * self.frame_width, 0,
                                  self.frame_width, self.frame_height,
-                                 self.x, self.y, 80, 80)  # 크기 조정
+                                 self.x, self.y, 90, 90)  # 크기 조정
         else:
+            draw_rectangle(*self.get_bb())
             self.image.clip_composite_draw(self.frame * self.frame_width, 0,
                                            self.frame_width, self.frame_height,
                                            0, 'h', self.x, self.y, 80, 80)
-
+    def get_bb(self):
+        return self.x - 30, self.y - 20, self.x + 40, self.y + 10
 class Crab:
     def __init__(self):
         self.x, self.y = -20, random.randint(230, BK_HEIGHT - 100)
@@ -151,13 +177,17 @@ class Crab:
 
     def draw(self):
         if self.direction == -1:
+            draw_rectangle(*self.get_bb())
             self.image.clip_draw(self.frame * self.frame_width, 0,
                                  self.frame_width, self.frame_height,
-                                 self.x, self.y, 30, 30)  # 크기 조정
+                                 self.x, self.y, 40, 40)  # 크기 조정
         else:
+            draw_rectangle(*self.get_bb())
             self.image.clip_composite_draw(self.frame * self.frame_width, 0,
                                            self.frame_width, self.frame_height,
-                                           0, 'h', self.x, self.y, 30, 30)
+                                           0, 'h', self.x, self.y, 40, 40)
+    def get_bb(self):
+        return self.x - 15, self.y - 15, self.x + 15, self.y + 15
 
 # 이벤트 처리 함수
 def handle_events():
