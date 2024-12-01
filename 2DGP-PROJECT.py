@@ -1,6 +1,7 @@
 from pico2d import *
 import random
 import time
+from pico2d import load_font
 # 화면 크기
 BK_WIDTH, BK_HEIGHT = 1080, 879
 # 이동 방향 초기화
@@ -81,6 +82,17 @@ class Num:
         self.image.clip_draw(self.frame * self.frame_width, 0,
                              self.frame_width, self.frame_height,
                              self.x, self.y, 50, 50)
+class Count:
+    def __init__(self):
+        self.font = load_font('ENCR10B.TTF', 20)
+        self.x, self.y = 50, 30
+
+    def draw(self, fish1_cnt, crab_cnt, fish2_cnt, fish3_cnt, squid_cnt):
+        self.font.draw(self.x, self.y + 50, f'Fish1 Count: {fish1_cnt}', (255, 255, 255))
+        self.font.draw(self.x, self.y + 30, f'Crab Count: {crab_cnt}', (255, 255, 255))
+        self.font.draw(self.x, self.y + 10, f'Fish2 Count: {fish2_cnt}', (255, 255, 255))
+        self.font.draw(self.x, self.y - 10, f'Fish3 Count: {fish3_cnt}', (255, 255, 255))
+        self.font.draw(self.x, self.y - 30, f'Squid Count: {squid_cnt}', (255, 255, 255))
 # 충돌 체크 함수
 def check_collision(a, b):
     left_a, bottom_a, right_a, top_a = a.get_bb()
@@ -256,7 +268,7 @@ class Squid:
             draw_rectangle(*self.get_bb())
     def get_bb(self):
         return self.x - 5, self.y - 45, self.x + 40, self.y + 60
-
+count = Count()
 # Fish1 스폰 함수
 def spawn_fish1():
     global fish1_list
@@ -405,7 +417,7 @@ def render_world():
     for squid in squid_list:
         squid.draw()
     whale.draw()
-
+    count.draw(fish1_cnt, crab_cnt, fish2_cnt, fish3_cnt, squid_cnt)
     update_canvas()
 # 초기화 및 게임 루프
 reset_world()
