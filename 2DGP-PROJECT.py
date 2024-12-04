@@ -21,6 +21,10 @@ crab_cnt = 0
 fish2_cnt =0
 fish3_cnt =0
 squid_cnt =0
+level1_cnt=1
+level2_cnt=1
+level3_cnt=1
+level4_cnt=1
 # 디버깅 모드 설정
 DEBUG_MODE = True
 # 디버그용 충돌 박스 그리기 함수
@@ -76,7 +80,7 @@ class Num:
         self.frame_height = self.image.h
 
     def update(self):
-        pass
+        self.frame = (self.frame + 1) % 9
 
     def draw(self):
         self.image.clip_draw(self.frame * self.frame_width, 0,
@@ -85,14 +89,14 @@ class Num:
 class Count:
     def __init__(self):
         self.font = load_font('ENCR10B.TTF', 20)
-        self.x, self.y = 50, 30
+        self.x, self.y = 100, 50
 
     def draw(self, fish1_cnt, crab_cnt, fish2_cnt, fish3_cnt, squid_cnt):
-        self.font.draw(self.x, self.y + 50, f'Fish1 Count: {fish1_cnt}', (255, 255, 255))
-        self.font.draw(self.x, self.y + 30, f'Crab Count: {crab_cnt}', (255, 255, 255))
-        self.font.draw(self.x, self.y + 10, f'Fish2 Count: {fish2_cnt}', (255, 255, 255))
-        self.font.draw(self.x, self.y - 10, f'Fish3 Count: {fish3_cnt}', (255, 255, 255))
-        self.font.draw(self.x, self.y - 30, f'Squid Count: {squid_cnt}', (255, 255, 255))
+        self.font.draw(self.x+180, self.y + 70, f'Fish1: {fish1_cnt}', (255, 255, 255))
+        self.font.draw(self.x+330, self.y + 70, f'Crab: {crab_cnt}', (255, 255, 255))
+        self.font.draw(self.x+480, self.y + 70, f'Fish2: {fish2_cnt}', (255, 255, 255))
+        self.font.draw(self.x+630, self.y + 70, f'Fish3: {fish3_cnt}', (255, 255, 255))
+        self.font.draw(self.x+780, self.y + 70, f'Squid: {squid_cnt}', (255, 255, 255))
 # 충돌 체크 함수
 def check_collision(a, b):
     left_a, bottom_a, right_a, top_a = a.get_bb()
@@ -341,13 +345,13 @@ def update_world():
 
     if current_time - last_spawn_time >= 3.0:
         spawn_fish1()
-        if fish1_cnt >= 1:
+        if fish1_cnt >= level1_cnt:
             spawn_crab()
-        if crab_cnt >= 1:
+        if crab_cnt >= level2_cnt:
             spawn_fish2()
-        if fish2_cnt >= 1:
+        if fish2_cnt >= level3_cnt:
             spawn_fish3()
-        if fish3_cnt >= 1:
+        if fish3_cnt >= level4_cnt:
             spawn_squid()
         last_spawn_time = current_time
 
@@ -357,6 +361,8 @@ def update_world():
         if check_collision(whale, fish):
             whale.is_colliding = True
             fish1_cnt += 1
+            if(fish1_cnt == level1_cnt):
+                num.update()
             whale.collision_time = time.time()
             fish1_list.remove(fish)
         elif fish.x < -50 or fish.x > BK_WIDTH + 50:
@@ -367,6 +373,8 @@ def update_world():
         if check_collision(whale, crab):
             whale.is_colliding = True
             crab_cnt += 1
+            if (crab_cnt == level2_cnt):
+                num.update()
             whale.collision_time = time.time()
             crab_list.remove(crab)
         elif crab.x < -50 or crab.x > BK_WIDTH + 50:
@@ -386,6 +394,8 @@ def update_world():
         if check_collision(whale, fish3):
             whale.is_colliding = True
             fish3_cnt += 1
+            if (fish3_cnt == level4_cnt):
+                num.update()
             whale.collision_time = time.time()
             fish3_list.remove(fish3)
         elif fish3.x < -50 or fish3.x > BK_WIDTH + 50:
@@ -395,6 +405,8 @@ def update_world():
         if check_collision(whale, squid):
             whale.is_colliding = True
             squid_cnt += 1
+            if (squid_cnt == 1):
+                num.update()
             whale.collision_time = time.time()
             squid_list.remove(squid)
         elif squid.x < -50 or squid.x > BK_WIDTH + 50:
