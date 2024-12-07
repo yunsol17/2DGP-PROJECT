@@ -1,3 +1,4 @@
+from PyInstaller.log import level
 from pico2d import *
 import random
 import time
@@ -92,13 +93,51 @@ class Count:
     def __init__(self):
         self.font = load_font('ENCR10B.TTF', 20)
         self.x, self.y = 100, 50
+        self.fish1_image = load_image('fish1.png')
+        self.crab_image = load_image('crab.png')
+        self.fish2_image = load_image('fish2.png')
+        self.fish3_image = load_image('fish3.png')
+        self.squid_image = load_image('squid.png')
 
-    def draw(self, fish1_cnt, crab_cnt, fish2_cnt, fish3_cnt, squid_cnt):
+        self.crab_frame = 0
+        self.crab_frame_width = self.crab_image.w // 3
+        self.crab_frame_height = self.crab_image.h
+
+        self.fish3_frame = 0
+        self.fish3_frame_width = self.fish3_image.w // 5
+        self.fish3_frame_height = self.fish3_image.h
+
+        self.squid_frame = 0
+        self.squid_frame_width = self.squid_image.w // 5
+        self.squid_frame_height = self.squid_image.h
+
+    def update(self):
+        self.crab_frame = (self.crab_frame + 1) % 3
+        self.fish3_frame = (self.fish3_frame + 1) % 5
+        self.squid_frame = (self.squid_frame + 1) % 5
+
+    def draw(self, fish1_cnt, crab_cnt, fish2_cnt, fish3_cnt, squid_cnt,current_level):
         self.font.draw(self.x+180, self.y + 70, f'Fish1: {fish1_cnt}', (255, 255, 255))
         self.font.draw(self.x+330, self.y + 70, f'Crab: {crab_cnt}', (255, 255, 255))
         self.font.draw(self.x+480, self.y + 70, f'Fish2: {fish2_cnt}', (255, 255, 255))
         self.font.draw(self.x+630, self.y + 70, f'Fish3: {fish3_cnt}', (255, 255, 255))
         self.font.draw(self.x+780, self.y + 70, f'Squid: {squid_cnt}', (255, 255, 255))
+
+        self.fish1_image.draw(self.x + 220, self.y + 20, 40, 40)
+        if current_level>=2:
+            self.crab_image.clip_draw(self.crab_frame * self.crab_frame_width, 0,
+                                      self.crab_frame_width, self.crab_frame_height,
+                                      self.x + 370, self.y + 20, 50, 50)
+        if current_level >= 3:
+            self.fish2_image.draw(self.x + 520, self.y + 20, 50, 50)
+        if current_level >= 4:
+            self.fish3_image.clip_draw(self.fish3_frame * self.fish3_frame_width, 0,
+                                       self.fish3_frame_width, self.fish3_frame_height,
+                                       self.x + 670, self.y + 20, 70, 70)
+        if current_level >= 5:
+            self.squid_image.clip_draw(self.squid_frame * self.squid_frame_width, 0,
+                                       self.squid_frame_width, self.squid_frame_height,
+                                       self.x + 820, self.y + 20, 70, 70)
 # 충돌 체크 함수
 def check_collision(a, b):
     left_a, bottom_a, right_a, top_a = a.get_bb()
@@ -184,7 +223,7 @@ class Shark:
         self.frame = 0
         self.image = load_image('shark.png')
         self.frame_width = self.image.w // 2
-        self.frame_height = self.image.h // 5
+        self.frame_height = self.image.h
 
     def update(self):
         self.frame = (self.frame + 1) % 2  # 프레임 수는 스프라이트 가로 프레임 수에 맞추세요
@@ -194,19 +233,19 @@ class Shark:
         if self.direction == 1:
             self.image.clip_draw(self.frame * self.frame_width, 0,
                                  self.frame_width, self.frame_height,
-                                 self.x, self.y, 150, 150)
+                                 self.x, self.y, 200, 150)
         else:
             self.image.clip_composite_draw(self.frame * self.frame_width, 0,
                                            self.frame_width, self.frame_height,
-                                           0, 'h', self.x, self.y, 150, 150)
+                                           0, 'h', self.x, self.y, 200, 150)
         draw_rectangle_debug(*self.get_bb())
 
     def get_bb(self):
 
         if self.direction == -1:
-            return self.x - 50, self.y - 15, self.x + 40, self.y + 15
+            return self.x - 90, self.y - 50, self.x + 90, self.y + 30
         else:
-            return self.x - 40, self.y - 15, self.x + 50, self.y + 15
+            return self.x - 90, self.y - 50, self.x + 90, self.y + 30
 # Fish1 클래스
 class Fish1:
     def __init__(self):
@@ -449,28 +488,29 @@ def update_world():
                 swimming = False
             else:
                 crab.update()
-
     for fish2 in fish2_list[:]:
         if check_collision(whale, fish2):
             if current_level<3:
                 swimming = False
             else:
                 fish2.update()
-
     for fish3 in fish3_list[:]:
         if check_collision(whale, fish3):
             if current_level<4:
                 swimming = False
             else:
                 fish3.update()
-
     for squid in squid_list[:]:
         if check_collision(whale, squid):
             if current_level<5:  # 상위 단계 조건 확인
                 swimming = False
             else:
                 squid.update()
-
+    for shark in shark_list[:]:
+        if check_collision(whale, shark):
+            swimming = False
+        else:
+            shark.update()
     if current_time - last_spawn_time >= 3.0:
         spawn_fish1()
         spawn_crab()
@@ -484,7 +524,6 @@ def update_world():
         if current_level >= 5:
             spawn_shark()
         last_spawn_time = current_time
-
     whale.update()
     for fish in fish1_list[:]:
         fish.update()
@@ -499,7 +538,6 @@ def update_world():
             fish1_list.remove(fish)
         elif fish.x < -50 or fish.x > BK_WIDTH + 50:
             fish1_list.remove(fish)
-
     for crab in crab_list[:]:
         crab.update()
         if check_collision(whale, crab):
@@ -515,7 +553,6 @@ def update_world():
                 crab_list.remove(crab)
             elif crab.x < -50 or crab.x > BK_WIDTH + 50:
                 crab_list.remove(crab)
-
     for fish2 in fish2_list[:]:
         fish2.update()
         if check_collision(whale, fish2):
@@ -558,7 +595,6 @@ def update_world():
                 squid_list.remove(squid)
         elif squid.x < -50 or squid.x > BK_WIDTH + 50:
             squid_list.remove(squid)
-
     for shark in shark_list[:]:
         shark.update()
         if shark.x < -100 or shark.x > BK_WIDTH + 100:
@@ -584,7 +620,7 @@ def render_world():
     for shark in shark_list:
         shark.draw()
     whale.draw()
-    count.draw(fish1_cnt, crab_cnt, fish2_cnt, fish3_cnt, squid_cnt)
+    count.draw(fish1_cnt, crab_cnt, fish2_cnt, fish3_cnt, squid_cnt,current_level)
     if not swimming:
         font = load_font('ENCR10B.TTF', 50)
         font.draw(BK_WIDTH // 2 - 150, BK_HEIGHT // 2, 'GAME OVER', (255, 0, 0))
@@ -596,6 +632,7 @@ swimming = True
 while swimming:
     handle_events()
     update_world()
+    count.update()
     render_world()
     delay(0.07)
 close_canvas()
