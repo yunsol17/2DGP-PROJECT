@@ -37,7 +37,7 @@ def draw_rectangle_debug(*args):
 # 배경 클래스
 class BackGround:
     def __init__(self):
-        self.image = load_image('BackGround.JPG')
+        self.image = load_image('BackGround.PNG')
 
     def update(self):
         pass
@@ -68,11 +68,25 @@ class Hp:
         self.image = load_image('hp.png')
         self.frame_width = self.image.w
         self.frame_height = self.image.h
-
     def draw(self):
         self.image.clip_draw(self.frame * self.frame_width, 0,
                              self.frame_width, self.frame_height,
                              self.x, self.y, 70, 50)
+class HpBar:
+    def __init__(self):
+        self.x, self.y = 230, 845
+        self.hp = 100
+        self.max_width = 250
+        self.image = load_image('hpbar.png')
+
+    def decrease_hp(self, amount):
+        self.hp = max(0, self.hp - amount)
+
+    def draw(self):
+        current_width = int(self.max_width * (self.hp / 100))
+        self.image.clip_draw(0, 0, current_width, self.image.h,
+                             self.x - (self.max_width - current_width) // 2, self.y,
+                             current_width, 40)
 # 숫자 표시 클래스
 class Num:
     def __init__(self):
@@ -159,10 +173,15 @@ class Whale:
         self.is_colliding = False
         self.collision_time = 0
         self.scale = 1.0
+        self.invincible = False
+        self.invincible_start_time = 0
 
     def update(self):
         global dir_x, dir_y
         current_time = time.time()
+
+        if self.invincible and current_time - self.invincible_start_time > 2.0:
+            self.invincible = False
 
         if self.is_colliding and current_time - self.collision_time >= 0.1:
             self.is_colliding = False
@@ -227,7 +246,7 @@ class Shark:
 
     def update(self):
         self.frame = (self.frame + 1) % 2  # 프레임 수는 스프라이트 가로 프레임 수에 맞추세요
-        self.x += 5 * self.direction
+        self.x += 10 * self.direction
 
     def draw(self):
         if self.direction == 1:
@@ -470,47 +489,63 @@ def handle_events():
                 dir_y += 1
 # 초기화 함수
 def reset_world():
-    global swimming, background, level, num, whale, hp
+    global swimming, background, level, num, whale, hp,hpbar
     swimming = True
     background = BackGround()
     num = Num()
     hp = Hp()
     level = Level()
     whale = Whale()
-
+    hpbar = HpBar()
 # 월드 업데이트 함수
 def update_world():
     global last_spawn_time, fish1_cnt,crab_cnt,fish2_cnt,fish3_cnt,squid_cnt,swimming,current_level
+
     current_time = time.time()
     for crab in crab_list[:]:
         if check_collision(whale, crab):
-            if current_level<2:
-                swimming = False
+            if not whale.invincible:
+                if current_level<2:
+                    hpbar.decrease_hp(10)
+                    whale.invincible = True
+                    whale.invincible_start_time = current_time
             else:
                 crab.update()
     for fish2 in fish2_list[:]:
         if check_collision(whale, fish2):
-            if current_level<3:
-                swimming = False
+            if not whale.invincible:
+                if current_level<3:
+                    hpbar.decrease_hp(10)
+                    whale.invincible = True
+                    whale.invincible_start_time = current_time
             else:
                 fish2.update()
     for fish3 in fish3_list[:]:
         if check_collision(whale, fish3):
-            if current_level<4:
-                swimming = False
+            if not whale.invincible:
+                if current_level<4:
+                    hpbar.decrease_hp(10)
+                    whale.invincible = True
+                    whale.invincible_start_time = current_time
             else:
                 fish3.update()
     for squid in squid_list[:]:
         if check_collision(whale, squid):
-            if current_level<5:  # 상위 단계 조건 확인
-                swimming = False
+            if not whale.invincible:
+                if current_level<5:  # 상위 단계 조건 확인
+                    hpbar.decrease_hp(10)
+                    whale.invincible = True
+                    whale.invincible_start_time = current_time
             else:
                 squid.update()
     for shark in shark_list[:]:
         if check_collision(whale, shark):
-            swimming = False
-        else:
-            shark.update()
+            if not whale.invincible:
+                hpbar.decrease_hp(20)
+                whale.invincible = True
+                whale.invincible_start_time = current_time
+            else:
+                shark.update()
     if current_time - last_spawn_time >= 3.0:
         spawn_fish1()
         spawn_crab()
@@ -605,6 +640,7 @@ def render_world():
     clear_canvas()
     background.draw()
     hp.draw()
+    hpbar.draw()
     num.draw()
     level.draw()
     for fish in fish1_list:
