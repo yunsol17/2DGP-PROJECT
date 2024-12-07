@@ -5,10 +5,31 @@ import time
 from pico2d import load_font
 # 화면 크기
 BK_WIDTH, BK_HEIGHT = 1080, 879
-# 이동 방향 초기화
+GAME_STATE_START_SCREEN = 0
+GAME_STATE_RUNNING = 1
+game_state = GAME_STATE_START_SCREEN
 dir_x, dir_y = 0, 0  # x축, y축 이동 방향 (왼쪽: -1, 오른쪽: 1)
+def draw_start_screen():
+    clear_canvas()
+    start_screen_image.draw(BK_WIDTH // 2, BK_HEIGHT // 2)
+    draw_rectangle(680, 30, 950, 150)
+    update_canvas()
+
+def handle_start_screen_events():
+    global game_state
+    events = get_events()
+    for event in events:
+        if event.type == SDL_QUIT:
+            close_canvas()
+            exit()
+        elif event.type == SDL_MOUSEBUTTONDOWN:
+            x, y = event.x, BK_HEIGHT - event.y
+            if 680 <= x <= 950 and 30 <= y <= 150:
+                game_state = GAME_STATE_RUNNING
+
 # 캔버스 생성
 open_canvas(BK_WIDTH, BK_HEIGHT)
+start_screen_image = load_image('start.png')
 # 객체 리스트 초기화
 fish1_list = []
 crab_list = []
@@ -25,11 +46,11 @@ crab_cnt = 0
 fish2_cnt =0
 fish3_cnt =0
 squid_cnt =0
-level1_cnt=1
-level2_cnt=1
-level3_cnt=1
-level4_cnt=1
-level5_cnt=2
+level1_cnt=2
+level2_cnt=2
+level3_cnt=2
+level4_cnt=6
+level5_cnt=8
 current_level=1
 shark_warning_time = 0
 score = 0
@@ -273,9 +294,9 @@ class Shark:
     def __init__(self):
         self.direction = random.choice([-1, 1])
         if self.direction == -1:
-            self.x = random.randint(-80, -20)
+            self.x = random.randint(-90, -40)
         else:
-            self.x = random.randint(BK_WIDTH + 20, BK_WIDTH + 200)
+            self.x = random.randint(BK_WIDTH + 40, BK_WIDTH + 200)
         self.y = random.randint(230, BK_HEIGHT - 100)
         self.frame = 0
         self.image = load_image('shark.png')
@@ -471,9 +492,9 @@ def spawn_crab():
 def spawn_fish2():
     global fish2_list
     count = random.randint(1, 3)
-    fish2 = Fish2()
-    fish2.direction = random.choice([-1, 1])
     for _ in range(count):
+        fish2 = Fish2()
+        fish2.direction = random.choice([-1, 1])
         fish2_list.append(fish2)
 # Fish3를 생성하는 함수
 def spawn_fish3():
@@ -684,7 +705,7 @@ def update_world():
         shark.update()
         if shark.x < -100 or shark.x > BK_WIDTH + 100:
             shark_list.remove(shark)
-    if current_time - last_bubble_spawn_time >= 1.0:
+    if current_time - last_bubble_spawn_time >= 10.0:
         spawn_bubble()
         last_bubble_spawn_time = current_time
     for bubble in bubble_list[:]:
@@ -737,10 +758,17 @@ def render_world():
 # 초기화 및 게임 루프
 reset_world()
 swimming = True
-while swimming:
-    handle_events()
-    update_world()
-    count.update()
-    render_world()
+while True:
+    if game_state == GAME_STATE_START_SCREEN:
+        draw_start_screen()
+        handle_start_screen_events()
+    elif game_state == GAME_STATE_RUNNING:
+        if not swimming:
+            break
+        handle_events()
+        update_world()
+        count.update()
+        render_world()
     delay(0.07)
+
 close_canvas()
