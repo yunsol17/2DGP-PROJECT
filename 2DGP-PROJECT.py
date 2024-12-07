@@ -16,9 +16,11 @@ fish2_list = []
 fish3_list = []
 squid_list = []
 shark_list =[]
-# 초기 시간
+bubble_list =[]
 last_spawn_time = time.time()
-fish1_cnt = 0  # Fish1을 먹은 개수
+last_bubble_spawn_time = time.time()
+level_up_time = 0
+fish1_cnt = 0
 crab_cnt = 0
 fish2_cnt =0
 fish3_cnt =0
@@ -27,7 +29,10 @@ level1_cnt=1
 level2_cnt=1
 level3_cnt=1
 level4_cnt=1
+level5_cnt=2
 current_level=1
+shark_warning_time = 0
+score = 0
 # 디버깅 모드 설정
 DEBUG_MODE = True
 # 디버그용 충돌 박스 그리기 함수
@@ -38,12 +43,14 @@ def draw_rectangle_debug(*args):
 class BackGround:
     def __init__(self):
         self.image = load_image('BackGround.PNG')
-
+        self.font = load_font('ENCR10B.TTF', 30)
     def update(self):
         pass
 
     def draw(self):
         self.image.draw(BK_WIDTH // 2, BK_HEIGHT // 2)
+        self.font.draw(BK_WIDTH - 280, BK_HEIGHT - 37, f'Score: {score}', (255, 255, 255))
+
 # 레벨 표시 클래스
 class Level:
     def __init__(self):
@@ -152,6 +159,28 @@ class Count:
             self.squid_image.clip_draw(self.squid_frame * self.squid_frame_width, 0,
                                        self.squid_frame_width, self.squid_frame_height,
                                        self.x + 820, self.y + 20, 70, 70)
+class Bubble:
+    def __init__(self):
+        self.direction = random.choice([-1, 1])
+        if self.direction == -1:
+            self.x = random.randint(-80, -20)
+        else:
+            self.x = random.randint(BK_WIDTH + 20, BK_WIDTH + 80)
+        self.y = random.randint(230, BK_HEIGHT - 100)
+        self.frame = 0
+        self.direction = 1
+        self.image = load_image('bubble.png')
+        self.frame_width = self.image.w
+        self.frame_height = self.image.h
+    def update(self):
+        self.x += 5 * self.direction
+    def draw(self):
+        self.image.clip_draw(self.frame * self.frame_width, 0,
+                                 self.frame_width, self.frame_height,
+                                 self.x, self.y, 50, 50)
+        draw_rectangle(*self.get_bb())
+    def get_bb(self):
+        return self.x - 20, self.y - 20, self.x + 20, self.y + 20
 # 충돌 체크 함수
 def check_collision(a, b):
     left_a, bottom_a, right_a, top_a = a.get_bb()
@@ -168,20 +197,26 @@ class Whale:
         self.frame = 0
         self.direction = 1
         self.image = load_image('whale.png')
+        self.bubble_image = load_image('bubble.png')
         self.frame_width = self.image.w // 2
         self.frame_height = self.image.h // 4
         self.is_colliding = False
         self.collision_time = 0
         self.scale = 1.0
-        self.invincible = False
-        self.invincible_start_time = 0
+        self.bubble_invincible = False
+        self.fish_invincible = False
+        self.bubble_invincible_start_time = 0
+        self.fish_invincible_start_time = 0
 
     def update(self):
         global dir_x, dir_y
         current_time = time.time()
 
-        if self.invincible and current_time - self.invincible_start_time > 2.0:
-            self.invincible = False
+        if self.bubble_invincible and current_time - self.bubble_invincible_start_time > 5.0:
+            self.bubble_invincible = False
+
+        if self.fish_invincible and current_time - self.fish_invincible_start_time > 1.0:
+            self.fish_invincible = False
 
         if self.is_colliding and current_time - self.collision_time >= 0.1:
             self.is_colliding = False
@@ -201,7 +236,7 @@ class Whale:
     def draw(self):
         draw_width = self.frame_width * self.scale
         draw_height = self.frame_height * self.scale
-
+        bubble_x = 80*self.scale
         if self.is_colliding:
             if self.direction == -1:
                 self.image.clip_draw(0, 2 * self.frame_height, self.frame_width, self.frame_height,
@@ -216,6 +251,9 @@ class Whale:
             else:
                 self.image.clip_composite_draw(self.frame * self.frame_width, 3 * self.frame_height, self.frame_width, self.frame_height,
                                                0, 'h', self.x, self.y, draw_width, draw_height)
+        if self.bubble_invincible:
+            self.bubble_image.draw(self.x, self.y, bubble_x, bubble_x)
+
         draw_rectangle_debug(*self.get_bb())
 
 
@@ -234,10 +272,10 @@ class Whale:
 class Shark:
     def __init__(self):
         self.direction = random.choice([-1, 1])
-        if self.direction == 1:
-            self.x = -20
+        if self.direction == -1:
+            self.x = random.randint(-80, -20)
         else:
-            self.x = BK_WIDTH + 20
+            self.x = random.randint(BK_WIDTH + 20, BK_WIDTH + 200)
         self.y = random.randint(230, BK_HEIGHT - 100)
         self.frame = 0
         self.image = load_image('shark.png')
@@ -246,33 +284,32 @@ class Shark:
 
     def update(self):
         self.frame = (self.frame + 1) % 2  # 프레임 수는 스프라이트 가로 프레임 수에 맞추세요
-        self.x += 10 * self.direction
+        self.x += 15 * self.direction
 
     def draw(self):
         if self.direction == 1:
             self.image.clip_draw(self.frame * self.frame_width, 0,
                                  self.frame_width, self.frame_height,
-                                 self.x, self.y, 200, 150)
+                                 self.x, self.y, 240, 180)
         else:
             self.image.clip_composite_draw(self.frame * self.frame_width, 0,
                                            self.frame_width, self.frame_height,
-                                           0, 'h', self.x, self.y, 200, 150)
+                                           0, 'h', self.x, self.y, 240, 180)
         draw_rectangle_debug(*self.get_bb())
 
     def get_bb(self):
-
         if self.direction == -1:
-            return self.x - 90, self.y - 50, self.x + 90, self.y + 30
+            return self.x - 108, self.y - 60, self.x + 108, self.y + 36
         else:
-            return self.x - 90, self.y - 50, self.x + 90, self.y + 30
+            return self.x - 108, self.y - 60, self.x + 108, self.y + 36
 # Fish1 클래스
 class Fish1:
     def __init__(self):
         self.direction = random.choice([-1, 1])
         if self.direction == -1:
-            self.x = -20
+            self.x = random.randint(-80, -20)
         else:
-            self.x = BK_WIDTH + 20
+            self.x = random.randint(BK_WIDTH + 20, BK_WIDTH + 80)
         self.y = random.randint(230, BK_HEIGHT - 100)
         self.frame = 0
         self.direction = -1
@@ -301,9 +338,9 @@ class Crab:
     def __init__(self):
         self.direction = random.choice([-1, 1])
         if self.direction == -1:
-            self.x = -20
+            self.x = random.randint(-80, -20)
         else:
-            self.x = BK_WIDTH + 20
+            self.x = random.randint(BK_WIDTH + 20, BK_WIDTH + 80)
         self.y = random.randint(230, BK_HEIGHT - 100)
         self.frame = 0
         self.image = load_image('crab.png')
@@ -331,9 +368,9 @@ class Fish2:
     def __init__(self):
         self.direction = random.choice([-1, 1])
         if self.direction == -1:
-            self.x = -20
+            self.x = random.randint(-80, -20)
         else:
-            self.x = BK_WIDTH + 20
+            self.x = random.randint(BK_WIDTH + 20, BK_WIDTH + 80)
         self.y = random.randint(230, BK_HEIGHT - 100)
         self.frame = 0
         self.direction = 1
@@ -358,9 +395,9 @@ class Fish3:
     def __init__(self):
         self.direction = random.choice([-1, 1])
         if self.direction == -1:
-            self.x = -20
+            self.x = random.randint(-80, -20)
         else:
-            self.x = BK_WIDTH + 20
+            self.x = random.randint(BK_WIDTH + 20, BK_WIDTH + 80)
         self.y = random.randint(230, BK_HEIGHT - 100)
         self.frame = 0
         self.direction = -1
@@ -384,14 +421,17 @@ class Fish3:
                                            self.frame_width, self.frame_height,
                                            0, 'h', self.x, self.y, 80, 80)
     def get_bb(self):
-        return self.x - 30, self.y - 20, self.x + 40, self.y + 10
+        if self.direction == 1:
+            return self.x - 30, self.y - 20, self.x + 40, self.y + 10
+        else:
+            return self.x - 40, self.y - 20, self.x + 30, self.y + 10
 class Squid:
     def __init__(self):
         self.direction = random.choice([-1, 1])
-        if self.direction == 1:
-            self.x = -20
+        if self.direction == -1:
+            self.x = random.randint(-80, -20)
         else:
-            self.x = BK_WIDTH + 20
+            self.x = random.randint(BK_WIDTH + 20, BK_WIDTH + 80)
         self.y = random.randint(230, BK_HEIGHT - 100)
         self.frame = 0
         self.direction = -1
@@ -404,14 +444,10 @@ class Squid:
         self.x += 5 * self.direction
 
     def draw(self):
-        if self.direction == -1:
-            self.image.clip_draw(self.frame * self.frame_width, 0,
+        self.image.clip_draw(self.frame * self.frame_width, 0,
                                  self.frame_width, self.frame_height,
                                  self.x, self.y, 150, 150)
-            draw_rectangle(*self.get_bb())
-        else:
-            self.image.clip_composite_draw(self.frame * self.frame_width, 0,self.frame_width, self.frame_height,0, 'h', self.x, self.y, 150, 150)
-            draw_rectangle(*self.get_bb())
+        draw_rectangle(*self.get_bb())
     def get_bb(self):
         return self.x - 5, self.y - 45, self.x + 40, self.y + 60
 count = Count()
@@ -442,24 +478,29 @@ def spawn_fish2():
 # Fish3를 생성하는 함수
 def spawn_fish3():
     global fish3_list
-    count = random.randint(1, 3)
-    fish3 = Fish3()
-    fish3.direction = random.choice([-1, 1])
+    count = random.randint(2, 5)
     for _ in range(count):
+        fish3 = Fish3()
+        fish3.direction = random.choice([-1, 1])
         fish3_list.append(fish3)
 def spawn_squid():
     global squid_list
     count = random.randint(1, 3)
-    squid = Squid()
-    squid.direction = random.choice([-1, 1])
     for _ in range(count):
+        squid = Squid()
+        squid.direction = random.choice([-1, 1])
         squid_list.append(squid)
 def spawn_shark():
     global shark_list
-    count = random.randint(1, 2)
+    count = random.randint(1, 3)
     for _ in range(count):
         shark = Shark()
+        shark.direction = random.choice([-1, 1])
         shark_list.append(shark)
+def spawn_bubble():
+    global bubble_list
+    bubble = Bubble()
+    bubble_list.append(bubble)
 # 이벤트 처리 함수
 def handle_events():
     global swimming, dir_x, dir_y
@@ -499,54 +540,57 @@ def reset_world():
     hpbar = HpBar()
 # 월드 업데이트 함수
 def update_world():
-    global last_spawn_time, fish1_cnt,crab_cnt,fish2_cnt,fish3_cnt,squid_cnt,swimming,current_level
+    global last_spawn_time, fish1_cnt,crab_cnt,fish2_cnt,fish3_cnt,squid_cnt,swimming,current_level,shark_warning_time,score,level_up_time,last_bubble_spawn_time
 
+    if hpbar.hp <= 0:
+        swimming = False
+        return
     current_time = time.time()
     for crab in crab_list[:]:
         if check_collision(whale, crab):
-            if not whale.invincible:
+            if not whale.bubble_invincible and not whale.fish_invincible :
                 if current_level<2:
                     hpbar.decrease_hp(10)
-                    whale.invincible = True
-                    whale.invincible_start_time = current_time
+                    whale.fish_invincible = True
+                    whale.fish_invincible_start_time = current_time
             else:
                 crab.update()
     for fish2 in fish2_list[:]:
         if check_collision(whale, fish2):
-            if not whale.invincible:
+            if not whale.bubble_invincible and not whale.fish_invincible:
                 if current_level<3:
                     hpbar.decrease_hp(10)
-                    whale.invincible = True
-                    whale.invincible_start_time = current_time
+                    whale.fish_invincible = True
+                    whale.fish_invincible_start_time = current_time
             else:
                 fish2.update()
     for fish3 in fish3_list[:]:
         if check_collision(whale, fish3):
-            if not whale.invincible:
+            if not whale.bubble_invincible and not whale.fish_invincible:
                 if current_level<4:
                     hpbar.decrease_hp(10)
-                    whale.invincible = True
-                    whale.invincible_start_time = current_time
+                    whale.fish_invincible = True
+                    whale.fish_invincible_start_time = current_time
             else:
                 fish3.update()
     for squid in squid_list[:]:
         if check_collision(whale, squid):
-            if not whale.invincible:
-                if current_level<5:  # 상위 단계 조건 확인
+            if not whale.bubble_invincible and not whale.fish_invincible:
+                if current_level<5:
                     hpbar.decrease_hp(10)
-                    whale.invincible = True
-                    whale.invincible_start_time = current_time
+                    whale.fish_invincible = True
+                    whale.fish_invincible_start_time = current_time
             else:
                 squid.update()
     for shark in shark_list[:]:
         if check_collision(whale, shark):
-            if not whale.invincible:
-                hpbar.decrease_hp(20)
-                whale.invincible = True
-                whale.invincible_start_time = current_time
+            if not whale.bubble_invincible and not whale.fish_invincible:
+                hpbar.decrease_hp(40)
+                whale.fish_invincible = True
+                whale.fish_invincible_start_time = current_time
             else:
                 shark.update()
-    if current_time - last_spawn_time >= 3.0:
+    if current_time - last_spawn_time >= 2.0:
         spawn_fish1()
         spawn_crab()
 
@@ -556,10 +600,12 @@ def update_world():
             spawn_fish3()
         if current_level>=4:
             spawn_squid()
-        if current_level >= 5:
+        if current_level > 5:
             spawn_shark()
         last_spawn_time = current_time
     whale.update()
+    if shark_warning_time > 0 and current_time - shark_warning_time > 3.0:
+        shark_warning_time = 0
     for fish in fish1_list[:]:
         fish.update()
         if check_collision(whale, fish):
@@ -567,6 +613,7 @@ def update_world():
             fish1_cnt += 1
             if(fish1_cnt == level1_cnt):
                 current_level=2
+                level_up_time = time.time()
                 num.update()
                 whale.size_up(0.25)
             whale.collision_time = time.time()
@@ -578,9 +625,9 @@ def update_world():
         if check_collision(whale, crab):
             if current_level >= 2:
                 whale.is_colliding = True
-
                 if (crab_cnt == level2_cnt):
                     num.update()
+                    level_up_time = time.time()
                     whale.size_up(0.25)
                     current_level = 3
                 crab_cnt += 1
@@ -595,6 +642,7 @@ def update_world():
                 whale.is_colliding = True
                 if (fish2_cnt == level3_cnt):
                     num.update()
+                    level_up_time = time.time()
                     whale.size_up(0.25)
                     current_level = 4
                 fish2_cnt += 1
@@ -609,6 +657,7 @@ def update_world():
                 whale.is_colliding = True
                 if (fish3_cnt == level4_cnt):
                     num.update()
+                    level_up_time = time.time()
                     whale.size_up(0.25)
                     current_level = 5
                 fish3_cnt += 1
@@ -622,10 +671,11 @@ def update_world():
             if current_level >= 5:
                 whale.is_colliding = True
                 squid_cnt += 1
-                if (squid_cnt == 1):
+                if (squid_cnt == level5_cnt):
+                    shark_warning_time = current_time
                     num.update()
                     whale.size_up(0.25)
-                    current_level = 5
+                    current_level = 6
                 whale.collision_time = time.time()
                 squid_list.remove(squid)
         elif squid.x < -50 or squid.x > BK_WIDTH + 50:
@@ -634,7 +684,18 @@ def update_world():
         shark.update()
         if shark.x < -100 or shark.x > BK_WIDTH + 100:
             shark_list.remove(shark)
-
+    if current_time - last_bubble_spawn_time >= 1.0:
+        spawn_bubble()
+        last_bubble_spawn_time = current_time
+    for bubble in bubble_list[:]:
+        bubble.update()
+        if check_collision(whale, bubble):
+            whale.bubble_invincible = True
+            whale.bubble_invincible_start_time = current_time
+            bubble_list.remove(bubble)
+        elif bubble.x < -100 or bubble.x > BK_WIDTH + 100:
+            bubble_list.remove(bubble)
+    score = (fish1_cnt*5)+(crab_cnt*10)+(fish2_cnt*15)+(fish3_cnt*20)+(squid_cnt*30)
 # 월드 렌더링 함수
 def render_world():
     clear_canvas()
@@ -655,8 +716,19 @@ def render_world():
         squid.draw()
     for shark in shark_list:
         shark.draw()
+    for bubble in bubble_list:
+        bubble.draw()
     whale.draw()
     count.draw(fish1_cnt, crab_cnt, fish2_cnt, fish3_cnt, squid_cnt,current_level)
+
+    if level_up_time > 0 and time.time() - level_up_time <= 1.0:
+        font = load_font('ENCR10B.TTF', 100)
+        font.draw(BK_WIDTH // 2 - 240, BK_HEIGHT // 2 + 100, 'LEVEL UP!', (250, 250, 255))
+    if shark_warning_time > 0:
+        current_time = time.time()
+        if current_time - shark_warning_time <= 3.0:
+            font = load_font('ENCR10B.TTF', 70)
+            font.draw(BK_WIDTH // 2 - 480, BK_HEIGHT // 2 + 100, '!!!! SHARK WARNING !!!!', (200, 0, 0))
     if not swimming:
         font = load_font('ENCR10B.TTF', 50)
         font.draw(BK_WIDTH // 2 - 150, BK_HEIGHT // 2, 'GAME OVER', (255, 0, 0))
