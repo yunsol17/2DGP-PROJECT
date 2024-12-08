@@ -230,6 +230,8 @@ def check_collision(a, b):
 # 고래 클래스
 class Whale:
     whale_eat_sound = None
+    bubble_sound = None
+    levelup_sound = None
     def __init__(self):
         self.x, self.y = random.randint(100, 700), 400
         self.frame = 0
@@ -247,7 +249,13 @@ class Whale:
         self.fish_invincible_start_time = 0
         if not self.whale_eat_sound:
             self.whale_eat_sound = load_wav('pop.mp3')
-            self.whale_eat_sound.set_volume(32)
+            self.whale_eat_sound.set_volume(42)
+        if not self.bubble_sound:
+            self.bubble_sound = load_wav('shine.mp3')
+            self.bubble_sound.set_volume(32)
+        if not self.levelup_sound:
+            self.levelup_sound = load_wav('levelup.mp3')
+            self.levelup_sound.set_volume(32)
 
     def update(self):
         global dir_x, dir_y
@@ -645,6 +653,7 @@ def update_world():
             fish1_cnt += 1
             if(fish1_cnt == level1_cnt):
                 current_level=2
+                whale.levelup_sound.play()
                 level_up_time = time.time()
                 num.update()
                 whale.size_up(0.25)
@@ -662,9 +671,11 @@ def update_world():
                     num.update()
                     level_up_time = time.time()
                     whale.size_up(0.25)
+                    whale.levelup_sound.play()
                     current_level = 3
                 crab_cnt += 1
                 whale.collision_time = time.time()
+                whale.whale_eat_sound.play()
                 crab_list.remove(crab)
             elif crab.x < -50 or crab.x > BK_WIDTH + 50:
                 crab_list.remove(crab)
@@ -678,8 +689,10 @@ def update_world():
                     level_up_time = time.time()
                     whale.size_up(0.25)
                     current_level = 4
+                    whale.levelup_sound.play()
                 fish2_cnt += 1
                 whale.collision_time = time.time()
+                whale.whale_eat_sound.play()
                 fish2_list.remove(fish2)
         elif fish2.x < -50 or fish2.x > BK_WIDTH + 50:
             fish2_list.remove(fish2)
@@ -693,8 +706,10 @@ def update_world():
                     level_up_time = time.time()
                     whale.size_up(0.25)
                     current_level = 5
+                    whale.levelup_sound.play()
                 fish3_cnt += 1
                 whale.collision_time = time.time()
+                whale.whale_eat_sound.play()
                 fish3_list.remove(fish3)
         elif fish3.x < -50 or fish3.x > BK_WIDTH + 50:
             fish3_list.remove(fish3)
@@ -709,7 +724,10 @@ def update_world():
                     num.update()
                     whale.size_up(0.25)
                     current_level = 6
+                    whale.levelup_sound.play()
+
                 whale.collision_time = time.time()
+                whale.whale_eat_sound.play()
                 squid_list.remove(squid)
         elif squid.x < -50 or squid.x > BK_WIDTH + 50:
             squid_list.remove(squid)
@@ -725,6 +743,7 @@ def update_world():
         if check_collision(whale, bubble):
             whale.bubble_invincible = True
             whale.bubble_invincible_start_time = current_time
+            whale.bubble_sound.play()
             bubble_list.remove(bubble)
         elif bubble.x < -100 or bubble.x > BK_WIDTH + 100:
             bubble_list.remove(bubble)
