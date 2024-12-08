@@ -6,13 +6,17 @@ from pico2d import load_font
 # 화면 크기
 BK_WIDTH, BK_HEIGHT = 1080, 879
 GAME_STATE_START_SCREEN = 0
+GAME_STATE_EXPLAIN_SCREEN = 2
 GAME_STATE_RUNNING = 1
 game_state = GAME_STATE_START_SCREEN
 dir_x, dir_y = 0, 0  # x축, y축 이동 방향 (왼쪽: -1, 오른쪽: 1)
 def draw_start_screen():
     clear_canvas()
     start_screen_image.draw(BK_WIDTH // 2, BK_HEIGHT // 2)
-    draw_rectangle(680, 30, 950, 150)
+    update_canvas()
+def draw_explain_screen():
+    clear_canvas()
+    explain_screen_image.draw(BK_WIDTH // 2, BK_HEIGHT // 2)
     update_canvas()
 
 def handle_start_screen_events():
@@ -26,10 +30,27 @@ def handle_start_screen_events():
             x, y = event.x, BK_HEIGHT - event.y
             if 680 <= x <= 950 and 30 <= y <= 150:
                 game_state = GAME_STATE_RUNNING
+            elif 130 <= x <= 400 and 30 <= y <= 150:
+                game_state = GAME_STATE_EXPLAIN_SCREEN
+def handle_explain_screen_events():
+    global game_state
+    events = get_events()
+    for event in events:
+        if event.type == SDL_QUIT:
+            close_canvas()
+            exit()
+        elif event.type == SDL_MOUSEBUTTONDOWN:
+            x, y = event.x, BK_HEIGHT - event.y
+            if BK_WIDTH - 100 <= x <= BK_WIDTH - 20 and BK_HEIGHT - 50 <= y <= BK_HEIGHT - 10:
+                game_state = GAME_STATE_START_SCREEN
 
 # 캔버스 생성
 open_canvas(BK_WIDTH, BK_HEIGHT)
+explain_screen_image = load_image('explain.png')
 start_screen_image = load_image('start.png')
+explain_button_rect = (300, 200, 500, 300)
+back_button_rect = (700, 500, 800, 600)
+
 # 객체 리스트 초기화
 fish1_list = []
 crab_list = []
@@ -46,20 +67,16 @@ crab_cnt = 0
 fish2_cnt =0
 fish3_cnt =0
 squid_cnt =0
-level1_cnt=2
-level2_cnt=2
-level3_cnt=2
-level4_cnt=6
-level5_cnt=8
+level1_cnt=6
+level2_cnt=10
+level3_cnt=15
+level4_cnt=18
+level5_cnt=10
 current_level=1
 shark_warning_time = 0
 score = 0
-# 디버깅 모드 설정
-DEBUG_MODE = True
-# 디버그용 충돌 박스 그리기 함수
-def draw_rectangle_debug(*args):
-    if DEBUG_MODE:
-        draw_rectangle(*args)
+
+
 # 배경 클래스
 class BackGround:
     def __init__(self):
@@ -199,7 +216,6 @@ class Bubble:
         self.image.clip_draw(self.frame * self.frame_width, 0,
                                  self.frame_width, self.frame_height,
                                  self.x, self.y, 50, 50)
-        draw_rectangle(*self.get_bb())
     def get_bb(self):
         return self.x - 20, self.y - 20, self.x + 20, self.y + 20
 # 충돌 체크 함수
@@ -213,6 +229,7 @@ def check_collision(a, b):
     return True
 # 고래 클래스
 class Whale:
+    whale_eat_sound = None
     def __init__(self):
         self.x, self.y = random.randint(100, 700), 400
         self.frame = 0
@@ -228,6 +245,9 @@ class Whale:
         self.fish_invincible = False
         self.bubble_invincible_start_time = 0
         self.fish_invincible_start_time = 0
+        if not self.whale_eat_sound:
+            self.whale_eat_sound = load_wav('pop.mp3')
+            self.whale_eat_sound.set_volume(32)
 
     def update(self):
         global dir_x, dir_y
@@ -275,8 +295,6 @@ class Whale:
         if self.bubble_invincible:
             self.bubble_image.draw(self.x, self.y, bubble_x, bubble_x)
 
-        draw_rectangle_debug(*self.get_bb())
-
 
     def get_bb(self):
         width_offset = 40 * self.scale
@@ -316,7 +334,6 @@ class Shark:
             self.image.clip_composite_draw(self.frame * self.frame_width, 0,
                                            self.frame_width, self.frame_height,
                                            0, 'h', self.x, self.y, 240, 180)
-        draw_rectangle_debug(*self.get_bb())
 
     def get_bb(self):
         if self.direction == -1:
@@ -350,7 +367,6 @@ class Fish1:
             self.image.clip_draw(self.frame * self.frame_width, 0,
                                  self.frame_width, self.frame_height,
                                  self.x, self.y, 20, 20)
-        draw_rectangle_debug(*self.get_bb())
 
     def get_bb(self):
         return self.x - 10, self.y - 10, self.x + 10, self.y + 10
@@ -381,7 +397,6 @@ class Crab:
             self.image.clip_composite_draw(self.frame * self.frame_width, 0,
                                            self.frame_width, self.frame_height,
                                            0, 'h', self.x, self.y, 40, 40)
-        draw_rectangle_debug(*self.get_bb())
 
     def get_bb(self):
         return self.x - 15, self.y - 15, self.x + 15, self.y + 15
@@ -409,7 +424,6 @@ class Fish2:
             self.image.clip_composite_draw(self.frame * self.frame_width, 0,
                                            self.frame_width, self.frame_height,
                                            0, 'h', self.x, self.y, 50, 50)
-        draw_rectangle(*self.get_bb())
     def get_bb(self):
         return self.x - 20, self.y - 20, self.x + 20, self.y + 20
 class Fish3:
@@ -432,12 +446,10 @@ class Fish3:
 
     def draw(self):
         if self.direction == 1:
-            draw_rectangle(*self.get_bb())
             self.image.clip_draw(self.frame * self.frame_width, 0,
                                  self.frame_width, self.frame_height,
                                  self.x, self.y, 90, 90)  # 크기 조정
         else:
-            draw_rectangle(*self.get_bb())
             self.image.clip_composite_draw(self.frame * self.frame_width, 0,
                                            self.frame_width, self.frame_height,
                                            0, 'h', self.x, self.y, 80, 80)
@@ -468,7 +480,6 @@ class Squid:
         self.image.clip_draw(self.frame * self.frame_width, 0,
                                  self.frame_width, self.frame_height,
                                  self.x, self.y, 150, 150)
-        draw_rectangle(*self.get_bb())
     def get_bb(self):
         return self.x - 5, self.y - 45, self.x + 40, self.y + 60
 count = Count()
@@ -638,6 +649,7 @@ def update_world():
                 num.update()
                 whale.size_up(0.25)
             whale.collision_time = time.time()
+            whale.whale_eat_sound.play()
             fish1_list.remove(fish)
         elif fish.x < -50 or fish.x > BK_WIDTH + 50:
             fish1_list.remove(fish)
@@ -762,6 +774,9 @@ while True:
     if game_state == GAME_STATE_START_SCREEN:
         draw_start_screen()
         handle_start_screen_events()
+    elif game_state == GAME_STATE_EXPLAIN_SCREEN:
+        draw_explain_screen()
+        handle_explain_screen_events()
     elif game_state == GAME_STATE_RUNNING:
         if not swimming:
             break
